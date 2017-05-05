@@ -9277,9 +9277,6 @@ Use.prototype = {
 		this.nodes = {};
 		this.nodes.text = {};
 		this.nodes.style = {};
-		this.indexs = {};
-		this.indexs.text = {};
-		this.indexs.style = {};
 		this.element.html(this.options.template);
 		this._dataInit();
 		this._eventInit();
@@ -9288,7 +9285,8 @@ Use.prototype = {
 		var _this = this;
 		this.element.on('click', function(){
 			_this.options.data.HelloWorld = 'GoodBye';
-			_this.options.data.color = 'blue';
+			_this.options.data.color = 'white';
+			_this.options.data.background = 'black';
 		});
 	},
 	_dataInit : function(){
@@ -9301,28 +9299,24 @@ Use.prototype = {
 				textNodes = this.element.filter(":contains({{" + dataName + "}})");
 			this.nodes.text[dataName] = Wind(textNodes);
 
-			var nodeIndex = 0;
 			for(var node of textNodes){
 				var str = Wind(node).html().replace(new RegExp('{{2}' + dataName + '}{2}','g'),this.options.data[dataName]);				
-				this.indexs.text[dataName] = [];
-				this.indexs.text[dataName][nodeIndex++] = this._getAllIndex(Wind(node).html(), '{{' + dataName + '}}', 'text');
+				if(!Wind(node).data('text'))
+					Wind(node).data('text', Wind(node).html());
 				Wind(node).html(str);
 			}
 
 			//Init style nodes
 			if(this.element.children().length)
-				styleNodes = this.element.find("[w-style*=w-" + dataName + "]");
+				styleNodes = this.element.find("[style*=w-" + dataName + "]");
 			else
-				styleNodes = this.element.filter("[w-style*=w-" + dataName + "]");
+				styleNodes = this.element.filter("[style*=w-" + dataName + "]");
 			this.nodes.style[dataName] = Wind(styleNodes);
-
-			nodeIndex = 0;
 			for(var node of styleNodes){
 				var style = 
-					Wind(node).attr('w-style').replace(new RegExp('w-' + dataName,'g'),this.options.data[dataName]+';');
-				this.indexs.style[dataName] = [];
-				this.indexs.style[dataName][nodeIndex++] = this._getAllIndex(Wind(node).attr('w-style'), 'w-' + dataName, 'style');
-				//Wind(node).attr('w-style', '');
+					Wind(node).attr('style').replace(new RegExp('w-' + dataName,'g'),this.options.data[dataName]);
+				if(!Wind(node).data('style'))
+					Wind(node).data('style', Wind(node).attr('style'));
 				Wind(node).attr('style', style);
 			}
 
@@ -9330,32 +9324,6 @@ Use.prototype = {
 			this._watchData(dataName);
 		}	
 		
-	},
-	_getAllIndex : function(str, subStr, type){
-		var indexs = [], index = 0, n = 0, num = 0;
-		var textRe = new RegExp('{{[\\w]+}}', 'g'), styleRe = new RegExp('w-[\\w]+', 'g');
-
-		for(var i = 0;(index = str.indexOf(subStr, index)) !== -1;i++){
-			if(type === 'text'){
-				while (textRe.lastIndex < index && textRe.exec(str) !== null)  {
-					if(textRe.lastIndex - subStr.length < index)
-						num++;
-				}
-				n = num * 4;
-
-			}
-			else if(type === 'style'){
-				while (styleRe.lastIndex < index && styleRe.exec(str) !== null)  {
-					if(styleRe.lastIndex - subStr.length < index)
-						num++;
-				}
-				n = num * 2;
-			}
-			indexs[i] = index - n;		//caculate the index after remove {{}}.
-			index += subStr.length;
-		}
-
-		return indexs;
 	},
 	_watchData : function(dataName){
 		var _this = this;
@@ -9365,44 +9333,39 @@ Use.prototype = {
 		    return value;
 		  },
 		  set: function(newValue) {
-		  	var updateNodes = function(nodes, indexs, type){
+		  	var updateNodes = function(nodes, type){
 	  		  	//Update all nodes which have this data
-	  		  	for(var nodeIndex = 0;nodeIndex < nodes[dataName].length;nodeIndex++){
-	  		  		var content;
-	  		  		if(nodes === _this.nodes.text)
-	  		  			content = Wind(nodes[dataName][nodeIndex]).html();
-	  		  		else if(nodes === _this.nodes.style)
-	  		  			content = Wind(nodes[dataName][nodeIndex]).attr('style');
-	  		  		var str = content, num = 0, relativelyLength = _this.options.data[dataName].length - newValue.length;
-	  		  		for(var index of indexs[dataName][nodeIndex]){
-		  		  		var begin = parseInt(index - num*relativelyLength),
-		  		  		end = begin + _this.options.data[dataName].length;
-		  		  		var preHtml = str.substring(0, begin), endHtml = str.substring(end);
-		  		  		str = preHtml + newValue + endHtml;
-		  		  		num++;
+	  		  	for(var node of nodes[dataName]){
+	  		  		var str = Wind(node).data(type);
+	  		  		if(type === 'text'){
+	  		  			str.match(/[\w]+/g).forEach(function(value){
+	  		  				if(value !== dataName)
+	  		  					str = str.replace(new RegExp('{{2}' + value + '}{2}','g'), _this.options.data[value]);
+	  		  			});
 
-		  		  	}
+	  		  			str = str.replace(new RegExp('{{2}' + dataName + '}{2}','g'),newValue);
+	  		  			Wind(node).html(str);
 
-	  		  		if(nodes === _this.nodes.text)
-	  		  			Wind(nodes[dataName][nodeIndex]).html(str);
-	  		  		else if(nodes === _this.nodes.style)
-	  		  			Wind(nodes[dataName][nodeIndex]).attr('style', str);
-
-	  		  		//Update other datas' indexs in this changed node
-	  		  		for(var node in nodes){
-	  		  			var index = Wind.inArray(nodes[dataName][nodeIndex],nodes[node]);
-	  		  			if(index !== -1){
-	  			  			indexs[node][index] = _this._getAllIndex(str, _this.options.data[node], type)
-	  		  			}
+	  		  		}
+	  		  		else if(type === 'style'){
+	  		  			
+	  		  			str.match(/w-[\w]{2,}/g).forEach(function(value){
+	  		  				value = value.substring(2);
+	  		  				if(value !== dataName)
+	  		  					str = str.replace(new RegExp('w-' + value,'g'),_this.options.data[value]);
+	  		  			});
+	  		  			
+	  		  			str = str.replace(new RegExp('w-' + dataName,'g'),newValue);
+	  		  			Wind(node).attr('style', str);
 	  		  		}
 	  		  	}
 		  	}
 
 		  	if(_this.nodes.text[dataName].length > 0)
-		  		updateNodes(_this.nodes.text, _this.indexs.text, 'text');
+		  		updateNodes(_this.nodes.text, 'text');
 
 		  	if(_this.nodes.style[dataName].length > 0)
-		  		updateNodes(_this.nodes.style, _this.indexs.style, 'style');
+		  		updateNodes(_this.nodes.style, 'style');
 
 		    value = newValue;
 		  }
