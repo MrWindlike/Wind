@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+	<meta charset="UTF-8">
+	<title>Wind</title>
+	<script type="text/javascript" src="Wind.js"></script>
+</head>
+<body>
+	<div id="Test"></div>
+</body>
+	<script type="text/javascript">
+		
+		$('#Test').Use({
+			template : '<div w-style="color:w-color;background:w-background">{{HelloWorld}} ({{color}})!</div>',
+			data : {
+				HelloWorld : 'HelloWorld',
+				background : 'blue',
+				color : 'red'
+			}
+		});
+	</script>
+</html>
